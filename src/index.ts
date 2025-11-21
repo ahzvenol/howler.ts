@@ -1604,7 +1604,7 @@ export class Howl {
                     ;(sound._node as GainNode).gain.setValueAtTime(from, currentTime)
                     ;(sound._node as GainNode).gain.linearRampToValueAtTime(to, end)
                 }
-                this._startFadeInterval(sound, from, to, duration, ids[i], typeof id === 'undefined')
+                this._startFadeInterval(sound, from, to, duration, typeof id === 'undefined')
             }
         }
         return this
@@ -2274,11 +2274,10 @@ export class Howl {
      * @param  {Number} from The value to fade from (0.0 to 1.0).
      * @param  {Number} to   The volume to fade to (0.0 to 1.0).
      * @param  {Number} len  Time in milliseconds to fade.
-     * @param  {Number} id   The sound id to fade.
      * @param  {Boolean} isGroup   If true, set the volume on the group.
      */
     /** @internal */
-    public _startFadeInterval(sound: Sound, from: number, to: number, len: number, id: number, isGroup: boolean): void {
+    public _startFadeInterval(sound: Sound, from: number, to: number, len: number, isGroup: boolean): void {
         let vol = from
         const diff = to - from
         const steps = Math.abs(diff / 0.01)
