@@ -2,6 +2,7 @@
     "name": "howler.ts",
     "version": "2.2.4",
     "private": true,
+    "license": "MIT",
     "type": "module",
     "scripts": {
         "build": "tsup src/index.ts --dts --format cjs,esm --minify --clean",

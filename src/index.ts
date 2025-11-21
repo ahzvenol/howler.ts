@@ -1,13 +1,14 @@
 /**
  * Howler.js v2.2.4 (Core) - TypeScript Port
  *
- *  howler.js v2.2.4
- *  howlerjs.com
+ * Original library: howler.js v2.2.4
+ * Website: https://howlerjs.com
  *
- *  (c) 2013-2020, James Simpson of GoldFire Studios
- *  goldfirestudios.com
+ * Original author:
+ *   (c) 2013-2020 James Simpson of GoldFire Studios
+ *   https://goldfirestudios.com
  *
- *  MIT License
+ * License: MIT
  */
 
 export type HowlCallback = (soundId: number) => void
