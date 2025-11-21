@@ -52,13 +52,9 @@ export interface HowlOptions {
 
 // --- Legacy Browser Compatibility Types ---
 
-// IOS Safari Legacy State
-type LegacyAudioContextState = AudioContextState | 'interrupted'
-
 // Older Web Audio API syntax
-type LegacyAudioContext = Omit<AudioContext, 'state' | 'close'> & {
+type LegacyAudioContext = Omit<AudioContext, 'close'> & {
     createGainNode?(): GainNode
-    state: LegacyAudioContextState
     close?(): Promise<void>
 }
 
