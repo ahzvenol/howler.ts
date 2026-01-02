@@ -106,7 +106,7 @@ export class Sound {
     /** @internal */ public _start: number
     /** @internal */ public _stop: number
     /** @internal */ public _fadeTo: number | null
-    /** @internal */ public _interval: any // Timer ID
+    /** @internal */ public _interval: number | undefined
 
     // Event Listeners
     /** @internal */ public _errorFn?: () => void
@@ -159,7 +159,7 @@ export class Sound {
             const gain = typeof ctx.createGain === 'undefined' ? ctx.createGainNode!() : ctx.createGain()
 
             this._node = gain as HowlerGainNode
-            this._node.gain.setValueAtTime(volume, Howler.ctx.currentTime)
+            this._node.gain.setValueAtTime(volume, ctx.currentTime)
             this._node.paused = true
             this._node.connect(Howler.masterGain!)
         } else if (!Howler.noAudio) {
@@ -221,7 +221,7 @@ export class Sound {
     public _errorListener(): void {
         const node = this._node as HowlerAudioElement
         // Fire an error event and pass back the code.
-        this._parent._emit('loaderror', this._id, node.error ? node.error.code : 0)
+        this._parent._emit('loaderror', this._id, node.error?.code ?? 0)
 
         // Clear the event listener.
         if (this._errorFn) node.removeEventListener('error', this._errorFn, false)
@@ -352,7 +352,7 @@ class HowlerGlobal {
                     // Loop through all sounds and change the volumes.
                     for (let j = 0; j < ids.length; j++) {
                         const sound = this._howls[i]._soundById(ids[j])
-                        if (sound && sound._node) {
+                        if (sound?._node) {
                             ;(sound._node as HTMLAudioElement).volume = sound._volume * vol
                         }
                     }
@@ -386,7 +386,7 @@ class HowlerGlobal {
                 // Loop through all sounds and mark the audio node as muted.
                 for (let j = 0; j < ids.length; j++) {
                     const sound = this._howls[i]._soundById(ids[j])
-                    if (sound && sound._node) {
+                    if (sound?._node) {
                         ;(sound._node as HTMLAudioElement).muted = muted ? true : sound._muted
                     }
                 }
@@ -416,7 +416,7 @@ class HowlerGlobal {
         }
 
         // Create a new AudioContext to make sure it is fully reset.
-        if (this.usingWebAudio && this.ctx && typeof this.ctx.close !== 'undefined') {
+        if (this.usingWebAudio && this.ctx?.close) {
             this.ctx.close()
             this.ctx = null
             this._setupAudioContext()
@@ -441,7 +441,7 @@ class HowlerGlobal {
     /** @internal */
     public _setup(): void {
         // Keeps track of the suspend/resume state of the AudioContext.
-        this.state = this.ctx ? this.ctx.state || 'suspended' : 'suspended'
+        this.state = this.ctx?.state ?? 'suspended'
 
         // Automatically begin the 30-second suspend process
         this._autoSuspendLogic()
@@ -498,7 +498,7 @@ class HowlerGlobal {
         const mpegTest = audioTest.canPlayType('audio/mpeg;').replace(/^no$/, '')
 
         // Opera version <33 has mixed MP3 support, so we need to check for and block it.
-        const ua = this._navigator ? this._navigator.userAgent : ''
+        const ua = this._navigator?.userAgent ?? ''
         const checkOpera = ua.match(/OPR\/(\d+)/g)
         const isOldOpera = checkOpera && parseInt(checkOpera[0].split('/')[1], 10) < 33
         const checkSafari = ua.indexOf('Safari') !== -1 && ua.indexOf('Chrome') === -1
@@ -567,11 +567,11 @@ class HowlerGlobal {
 
         // Check if a webview is being used on iOS8 or earlier (rather than the browser).
         // If it is, disable Web Audio as it causes crashing.
-        const iOS = /iP(hone|od|ad)/.test(this._navigator && this._navigator.platform)
-        const appVersion = this._navigator && this._navigator.appVersion.match(/OS (\d+)_(\d+)_?(\d+)?/)
+        const iOS = /iP(hone|od|ad)/.test(this._navigator?.platform)
+        const appVersion = this._navigator?.appVersion.match(/OS (\d+)_(\d+)_?(\d+)?/)
         const version = appVersion ? parseInt(appVersion[1], 10) : null
         if (iOS && version && version < 9) {
-            const safari = /safari/.test(this._navigator && this._navigator.userAgent.toLowerCase())
+            const safari = /safari/.test(this._navigator?.userAgent.toLowerCase())
             if (this._navigator && !safari) {
                 this.usingWebAudio = false
             }
@@ -581,8 +581,8 @@ class HowlerGlobal {
         if (this.usingWebAudio && this.ctx) {
             const ctx = this.ctx
             this.masterGain = typeof ctx.createGain === 'undefined' ? ctx.createGainNode!() : ctx.createGain()
-            this.masterGain.gain.setValueAtTime(this._muted ? 0 : this._volume, this.ctx.currentTime)
-            this.masterGain.connect(this.ctx.destination)
+            this.masterGain.gain.setValueAtTime(this._muted ? 0 : this._volume, ctx.currentTime)
+            this.masterGain.connect(ctx.destination)
         }
 
         // Re-run the setup on Howler.
@@ -716,10 +716,10 @@ class HowlerGlobal {
             return this._html5AudioPool.pop()!
         }
 
-        //.Check if the audio is locked and throw a warning.
+        // Check if the audio is locked and throw a warning.
         const testPlay = new Audio().play() as PlayReturn
-        if (!!testPlay && typeof testPlay.then === 'function') {
-            testPlay.catch(() => {
+        if (typeof testPlay?.then === 'function') {
+            testPlay?.catch(() => {
                 console.warn('HTML5 Audio pool exhausted, returning potentially locked audio object.')
             })
         }
@@ -743,7 +743,7 @@ class HowlerGlobal {
      */
     /** @internal */
     public _autoSuspendLogic(): void {
-        if (!this.autoSuspend || !this.ctx || typeof this.ctx.suspend === 'undefined' || !this.usingWebAudio) {
+        if (!this.autoSuspend || !this.ctx?.suspend || !this.usingWebAudio) {
             return
         }
 
@@ -784,7 +784,7 @@ class HowlerGlobal {
      */
     /** @internal */
     public _autoResume(): void {
-        if (!this.ctx || typeof this.ctx.resume === 'undefined' || !this.usingWebAudio) {
+        if (!this.ctx?.resume || !this.usingWebAudio) {
             return
         }
 
@@ -859,21 +859,21 @@ export class Howl {
 
         // Setup user-defined default properties.
         this._events = {}
-        this._autoplay = options.autoplay || false
-        this._format = typeof options.format !== 'string' ? options.format || [] : [options.format]
-        this._html5 = options.html5 || false
-        this._muted = options.mute || false
-        this._loop = options.loop || false
-        this._pool = options.pool || 5
+        this._autoplay = options.autoplay ?? false
+        this._format = typeof options.format !== 'string' ? (options.format ?? []) : [options.format]
+        this._html5 = options.html5 ?? false
+        this._muted = options.mute ?? false
+        this._loop = options.loop ?? false
+        this._pool = options.pool ?? 5
         this._preload = typeof options.preload === 'boolean' || options.preload === 'metadata' ? options.preload : true
-        this._rate = options.rate || 1
-        this._sprite = options.sprite || {}
-        this._src = typeof options.src !== 'string' ? options.src || [] : [options.src]
-        this._volume = options.volume !== undefined ? options.volume : 1
+        this._rate = options.rate ?? 1
+        this._sprite = options.sprite ?? {}
+        this._src = typeof options.src !== 'string' ? (options.src ?? []) : [options.src]
+        this._volume = options.volume ?? 1
         this._xhr = {
-            method: options.xhr && options.xhr.method ? options.xhr.method : 'GET',
-            headers: options.xhr && options.xhr.headers ? options.xhr.headers : null,
-            withCredentials: options.xhr && options.xhr.withCredentials ? options.xhr.withCredentials : false
+            method: options.xhr?.method ?? 'GET',
+            headers: options.xhr?.headers ?? null,
+            withCredentials: options.xhr?.withCredentials ?? false
         }
 
         // Setup all other default properties.
@@ -903,7 +903,7 @@ export class Howl {
         this._webAudio = Howler.usingWebAudio && !this._html5
 
         // Automatically try to enable audio.
-        if (typeof Howler.ctx !== 'undefined' && Howler.ctx && Howler.autoUnlock) {
+        if (Howler.ctx && Howler.autoUnlock) {
             Howler._unlockAudio()
         }
 
@@ -949,7 +949,7 @@ export class Howl {
         // Loop through the sources and pick the first one that is compatible.
         for (let i = 0; i < this._src.length; i++) {
             let ext: string | null = null
-            let str = this._src[i]
+            const str = this._src[i]
 
             if (this._format && this._format[i]) {
                 // If an extension was specified, use that instead.
@@ -1148,9 +1148,9 @@ export class Howl {
                 const bufferSource = (node as HowlerGainNode).bufferSource!
                 if (typeof bufferSource.start === 'undefined') {
                     if (sound._loop) {
-                        if (bufferSource.noteGrainOn) bufferSource.noteGrainOn(0, seek, 86400)
+                        bufferSource.noteGrainOn?.(0, seek, 86400)
                     } else {
-                        if (bufferSource.noteGrainOn) bufferSource.noteGrainOn(0, seek, duration)
+                        bufferSource.noteGrainOn?.(0, seek, duration)
                     }
                 } else {
                     sound._loop ? bufferSource.start(0, seek, 86400) : bufferSource.start(0, seek, duration)
@@ -1194,7 +1194,7 @@ export class Howl {
                     const play = html5Node.play() as PlayReturn
 
                     // Support older browsers that don't support promises, and thus don't have this issue.
-                    if (!!play && typeof play.then === 'function') {
+                    if (typeof play?.then === 'function') {
                         // Implements a lock to prevent DOMException: The play() request was interrupted by a call to pause().
                         this._playLock = true
 
@@ -1334,7 +1334,7 @@ export class Howl {
 
                         const bs = (sound._node as HowlerGainNode).bufferSource!
                         if (typeof bs.stop === 'undefined') {
-                            if (bs.noteOff) bs.noteOff(0)
+                            bs.noteOff?.(0)
                         } else bs.stop(0)
 
                         // Clean up the buffer source.
@@ -1349,7 +1349,7 @@ export class Howl {
             }
 
             // Fire the pause event, unless `true` is passed as the 2nd argument.
-            if (!internalArg) this._emit('pause', sound ? sound._id : undefined)
+            if (!internalArg) this._emit('pause', sound?._id)
         }
         return this
     }
@@ -1403,7 +1403,7 @@ export class Howl {
                         if ((sound._node as HowlerGainNode).bufferSource) {
                             const bs = (sound._node as HowlerGainNode).bufferSource!
                             if (typeof bs.stop === 'undefined') {
-                                if (bs.noteOff) bs.noteOff(0)
+                                bs.noteOff?.(0)
                             } else bs.stop(0)
 
                             // Clean up the buffer source.
@@ -1909,7 +1909,7 @@ export class Howl {
         if (index >= 0) Howler._howls.splice(index, 1)
 
         // Delete this sound from the cache (if no other Howl is using it).
-        if (bufferCache && bufferCache[this._src as string]) {
+        if (bufferCache[this._src as string]) {
             delete bufferCache[this._src as string]
         }
 
@@ -2122,7 +2122,7 @@ export class Howl {
                 clearTimeout(this._endTimers[id])
             } else {
                 const sound = this._soundById(id)
-                if (sound && sound._node) {
+                if (sound?._node) {
                     ;(sound._node as HTMLAudioElement).removeEventListener('ended', this._endTimers[id], false)
                 }
             }
@@ -2201,7 +2201,7 @@ export class Howl {
     /** @internal */
     public _getSoundIds(id?: number): number[] {
         if (typeof id === 'undefined') {
-            const ids = []
+            const ids: number[] = []
             for (let i = 0; i < this._sounds.length; i++) ids.push(this._sounds[i]._id)
             return ids
         } else {
@@ -2259,7 +2259,7 @@ export class Howl {
      */
     /** @internal */
     public _clearSound(node: HTMLAudioElement): void {
-        const checkIE = /MSIE |Trident\//.test(Howler._navigator && Howler._navigator.userAgent)
+        const checkIE = /MSIE |Trident\//.test(Howler._navigator?.userAgent)
         if (!checkIE) {
             node.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'
         }
@@ -2311,7 +2311,7 @@ export class Howl {
             // When the fade is complete, stop it and fire event.
             if ((to < from && vol <= to) || (to > from && vol >= to)) {
                 clearInterval(sound._interval)
-                sound._interval = null
+                sound._interval = undefined
                 sound._fadeTo = null
                 this.volume(to, sound._id)
                 this._emit('fade', sound._id)
@@ -2332,7 +2332,7 @@ export class Howl {
                 ;(sound._node as GainNode).gain.cancelScheduledValues(Howler.ctx!.currentTime)
             }
             clearInterval(sound._interval)
-            sound._interval = null
+            sound._interval = undefined
             this.volume(sound._fadeTo!, id)
             sound._fadeTo = null
             this._emit('fade', id)
@@ -2369,9 +2369,10 @@ export class Howl {
             xhr.responseType = 'arraybuffer'
 
             // Apply any custom headers to the request.
-            if (this._xhr.headers) {
-                Object.keys(this._xhr.headers).forEach((key) => {
-                    xhr.setRequestHeader(key, this._xhr.headers![key])
+            const headers = this._xhr.headers
+            if (headers) {
+                Object.keys(headers).forEach((key) => {
+                    xhr.setRequestHeader(key, headers[key])
                 })
             }
 
